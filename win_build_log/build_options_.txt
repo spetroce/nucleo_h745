@@ -1,0 +1,10 @@
+Release build options that were copy/pasted from the logs. Top is CM4 and bottom is CM7.
+
+-mcpu=cortex-m4 -std=gnu11 -DCORE_CM4 -DUSE_HAL_DRIVER -DSTM32H745xx -c
+-mcpu=cortex-m7 -std=gnu11 -DCORE_CM7 -DUSE_HAL_DRIVER -DSTM32H745xx -c
+
+-Os -ffunction-sections -fdata-sections -Wall -fstack-usage -fcyclomatic-complexity -MMD -MP
+-Os -ffunction-sections -fdata-sections -Wall -fstack-usage -fcyclomatic-complexity -MMD -MP
+
+--specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb
+--specs=nano.specs -mfpu=fpv5-d16 -mfloat-abi=hard -mthumb
