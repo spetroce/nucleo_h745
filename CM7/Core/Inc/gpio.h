@@ -33,7 +33,7 @@ extern "C" {
 /* USER CODE END Includes */
 
 /* USER CODE BEGIN Private defines */
-
+extern volatile bool g_gpio_user_button;
 /* USER CODE END Private defines */
 
 void MX_GPIO_Init(void);

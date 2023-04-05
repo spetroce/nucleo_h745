@@ -132,8 +132,9 @@ Error_Handler();
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-    HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
-    HAL_Delay(100);
+    if (g_gpio_user_button) {
+      g_gpio_user_button = false;
+    }
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
