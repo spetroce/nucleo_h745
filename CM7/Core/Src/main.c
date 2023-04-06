@@ -131,12 +131,17 @@ uint16_t SetupCycleBurstBuffer(const uint16_t cycle_on_time,
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-  SCB_EnableICache();
-  SCB_EnableDCache();
+
   /* USER CODE END 1 */
 /* USER CODE BEGIN Boot_Mode_Sequence_0 */
   int32_t timeout;
 /* USER CODE END Boot_Mode_Sequence_0 */
+
+  /* Enable I-Cache---------------------------------------------------------*/
+  SCB_EnableICache();
+
+  /* Enable D-Cache---------------------------------------------------------*/
+  SCB_EnableDCache();
 
 /* USER CODE BEGIN Boot_Mode_Sequence_1 */
   /* Wait until CPU2 boots and enters in stop mode or timeout*/
