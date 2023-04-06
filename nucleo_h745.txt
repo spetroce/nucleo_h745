@@ -21,7 +21,7 @@ RCC	Crystal/Ceramic Resonator	RCC_OSC32_OUT	PC15-OSC32_OUT (OSC32_OUT)
 SYS	SysTick	SYS_VS_Systick	VP_SYS_VS_Systick
 SYS_M4	SysTick	SYS_M4_VS_Systick	VP_SYS_M4_VS_Systick
 TIM2	Internal Clock	TIM2_VS_ClockSourceINT	VP_TIM2_VS_ClockSourceINT
-TIM2	PWM Generation CH1	TIM2_CH1	PA0
+TIM2	Output Compare CH1	TIM2_CH1	PA0
 USART3	Asynchronous	USART3_RX	PD9
 USART3	Asynchronous	USART3_TX	PD8
 USB_OTG_FS	Device_Only	USB_OTG_FS_DM	PA11
@@ -74,7 +74,7 @@ RCC	Crystal/Ceramic Resonator	RCC_OSC32_OUT	PC15-OSC32_OUT (OSC32_OUT)
 SYS	SysTick	SYS_VS_Systick	VP_SYS_VS_Systick
 SYS_M4	SysTick	SYS_M4_VS_Systick	VP_SYS_M4_VS_Systick
 TIM2	Internal Clock	TIM2_VS_ClockSourceINT	VP_TIM2_VS_ClockSourceINT
-TIM2	PWM Generation CH1	TIM2_CH1	PA0
+TIM2	Output Compare CH1	TIM2_CH1	PA0
 USART3	Asynchronous	USART3_RX	PD9
 USART3	Asynchronous	USART3_TX	PD8
 USB_OTG_FS	Device_Only	USB_OTG_FS_DM	PA11

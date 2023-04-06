@@ -52,15 +52,29 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-#define CCRValue_BufferSize     37
+const uint16_t MIN_CYCLE_ON_TIME = 5;  // Expressed in 100 ns intervals.
+const uint16_t MAX_CYCLE_ON_TIME = 1000;  // Expressed in 100 ns intervals.
+const uint32_t MIN_CYCLE_OFF_TIME = 5;  // Expressed in 100 ns intervals.
+const uint32_t MAX_CYCLE_OFF_TIME = 100000;  // Expressed in 100 ns intervals.
+const uint8_t MIN_NUM_CYCLE_PER_BURST = 1;
+const uint8_t MAX_NUM_CYCLE_PER_BURST = 100;
 
-ALIGN_32BYTES (uint32_t DiscontinuousSineCCRValue_Buffer[CCRValue_BufferSize]) =
-{
-  14999, 17603, 20128, 22498, 24640, 26488, 27988, 29093, 29770,
-  29998, 29770, 29093, 27988, 26488, 24640, 22498, 20128, 17603, 
-  14999, 12394, 9869, 7499, 5357, 3509, 2009, 904, 227, 1, 227, 
-  904, 2009, 3509, 5357, 7499, 9869, 12394, 14999
-};
+/*
+  cycle on width (pulse width): 0.5 µs to 100 µs
+  cycle off width (cycle_delay): 0.5 µs to 10 ms
+  cycles per burst: 1 to 100
+  burst delay: 10 ms to 1 s 
+  number of burst: 1 to 100
+
+  maximum time: (((0.0001 + 0.01) * 100) + 1) * 100 = 201 seconds
+  maximum CCR values: 20000
+
+  Since the timing between bursts is not super tight, we can probably just
+  trigger that from software and reduce the CCR DMA maximum size from 20000 to
+  200 samples, so 800 bytes.
+*/
+#define MAX_CCR_VALUE_BUFFER_LEN 800
+ALIGN_32BYTES (uint32_t g_ccr_value_buffer[MAX_CCR_VALUE_BUFFER_LEN]);
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -71,7 +85,43 @@ void SystemClock_Config(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-
+/**
+ * \brief Fill the cycle burst CCR value buffer.
+ *
+ * \param cycle_on_time The cycle on time in 100 ns intervals. Valid values are
+ * from MIN_CYCLE_ON_TIME to MAX_CYCLE_ON_TIME.
+ * \param cycle_off_time The cycle off time in 100 ns intervals. Valid values
+ * are from MIN_CYCLE_OFF_TIME to MAX_CYCLE_OFF_TIME.
+ * \param num_cycle_per_burst The number of cycles per burst (ie. The number of
+ * times a cycle should be repeated). Valid values are from
+ * MIN_NUM_CYCLE_PER_BURST to MAX_NUM_CYCLE_PER_BURST.
+ * \return Returns the number of values added to the DMA CCR value buffer. If an
+ * error occured, zero is returned.
+ */
+uint16_t SetupCycleBurstBuffer(const uint16_t cycle_on_time,
+                               const uint32_t cycle_off_time,
+                               const uint8_t num_cycle_per_burst) {
+  if (cycle_on_time < MIN_CYCLE_ON_TIME ||
+      cycle_on_time > MAX_CYCLE_ON_TIME ||
+      cycle_off_time < MIN_CYCLE_OFF_TIME ||
+      cycle_off_time > MAX_CYCLE_OFF_TIME ||
+      num_cycle_per_burst < MIN_NUM_CYCLE_PER_BURST ||
+      num_cycle_per_burst > MAX_NUM_CYCLE_PER_BURST) {
+    return 0;
+  }
+  uint32_t tim_cnt = 0;
+  uint16_t i = 0, j;
+  g_ccr_value_buffer[i++] = tim_cnt;
+  for (j = 0; j < num_cycle_per_burst; ++j) {
+    tim_cnt += cycle_on_time;
+    g_ccr_value_buffer[i++] = tim_cnt;
+    if (j+1 < num_cycle_per_burst) {
+      tim_cnt += cycle_off_time;
+      g_ccr_value_buffer[i++] = tim_cnt;
+    }
+  }
+  return i;
+}
 /* USER CODE END 0 */
 
 /**
@@ -81,10 +131,7 @@ void SystemClock_Config(void);
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-  /* Enable I-Cache---------------------------------------------------------*/
   SCB_EnableICache();
-
-  /* Enable D-Cache---------------------------------------------------------*/
   SCB_EnableDCache();
   /* USER CODE END 1 */
 /* USER CODE BEGIN Boot_Mode_Sequence_0 */
@@ -108,7 +155,7 @@ int main(void)
   /* USER CODE BEGIN Init */
 
   /* Clean Data Cache to update the content of the SRAM to be used by the DMA */
-  SCB_CleanDCache_by_Addr((uint32_t *) DiscontinuousSineCCRValue_Buffer, CCRValue_BufferSize );
+  // SCB_CleanDCache_by_Addr((uint32_t*)g_ccr_value_buffer, MAX_CCR_VALUE_BUFFER_LEN);
 
   /* USER CODE END Init */
 
@@ -145,8 +192,6 @@ Error_Handler();
   MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
 
-  HAL_TIM_PWM_Start_DMA(&htim2, TIM_CHANNEL_1, DiscontinuousSineCCRValue_Buffer, CCRValue_BufferSize);
-
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -156,10 +201,17 @@ Error_Handler();
     if (g_gpio_user_button) {
       g_gpio_user_button = false;
       int i;
-      for (i = 0; i < 4; ++i) {
-        HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
-        HAL_Delay(50);
+      uint16_t ccr_value_buffer_len = SetupCycleBurstBuffer(10, 5, 3);
+      if (ccr_value_buffer_len) {
+        for (i = 0; i < 4; ++i) {
+          HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
+          HAL_Delay(50);
+        }
       }
+      // __HAL_TIM_SET_COUNTER(&htim2, 0);
+      SCB_CleanDCache_by_Addr(g_ccr_value_buffer, ccr_value_buffer_len);
+      // htim2.Instance->EGR  |= TIM_EGR_UG;
+      HAL_TIM_OC_Start_DMA(&htim2, TIM_CHANNEL_1, g_ccr_value_buffer, ccr_value_buffer_len);
     }
     /* USER CODE END WHILE */
 
@@ -214,13 +266,13 @@ void SystemClock_Config(void)
                               |RCC_CLOCKTYPE_D3PCLK1|RCC_CLOCKTYPE_D1PCLK1;
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
   RCC_ClkInitStruct.SYSCLKDivider = RCC_SYSCLK_DIV1;
-  RCC_ClkInitStruct.AHBCLKDivider = RCC_HCLK_DIV2;
+  RCC_ClkInitStruct.AHBCLKDivider = RCC_HCLK_DIV16;
   RCC_ClkInitStruct.APB3CLKDivider = RCC_APB3_DIV2;
   RCC_ClkInitStruct.APB1CLKDivider = RCC_APB1_DIV2;
   RCC_ClkInitStruct.APB2CLKDivider = RCC_APB2_DIV2;
   RCC_ClkInitStruct.APB4CLKDivider = RCC_APB4_DIV2;
 
-  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_2) != HAL_OK)
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_0) != HAL_OK)
   {
     Error_Handler();
   }
