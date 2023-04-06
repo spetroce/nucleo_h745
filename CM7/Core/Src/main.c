@@ -18,7 +18,9 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "dma.h"
 #include "eth.h"
+#include "tim.h"
 #include "usart.h"
 #include "usb_otg.h"
 #include "gpio.h"
@@ -50,7 +52,15 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
+#define CCRValue_BufferSize     37
 
+ALIGN_32BYTES (uint32_t DiscontinuousSineCCRValue_Buffer[CCRValue_BufferSize]) =
+{
+  14999, 17603, 20128, 22498, 24640, 26488, 27988, 29093, 29770,
+  29998, 29770, 29093, 27988, 26488, 24640, 22498, 20128, 17603, 
+  14999, 12394, 9869, 7499, 5357, 3509, 2009, 904, 227, 1, 227, 
+  904, 2009, 3509, 5357, 7499, 9869, 12394, 14999
+};
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -71,7 +81,11 @@ void SystemClock_Config(void);
 int main(void)
 {
   /* USER CODE BEGIN 1 */
+  /* Enable I-Cache---------------------------------------------------------*/
+  SCB_EnableICache();
 
+  /* Enable D-Cache---------------------------------------------------------*/
+  SCB_EnableDCache();
   /* USER CODE END 1 */
 /* USER CODE BEGIN Boot_Mode_Sequence_0 */
   int32_t timeout;
@@ -92,6 +106,9 @@ int main(void)
   HAL_Init();
 
   /* USER CODE BEGIN Init */
+
+  /* Clean Data Cache to update the content of the SRAM to be used by the DMA */
+  SCB_CleanDCache_by_Addr((uint32_t *) DiscontinuousSineCCRValue_Buffer, CCRValue_BufferSize );
 
   /* USER CODE END Init */
 
@@ -121,10 +138,14 @@ Error_Handler();
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
-  MX_ETH_Init();
+  MX_DMA_Init();
   MX_USART3_UART_Init();
   MX_USB_OTG_FS_PCD_Init();
+  MX_ETH_Init();
+  MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
+
+  HAL_TIM_PWM_Start_DMA(&htim2, TIM_CHANNEL_1, DiscontinuousSineCCRValue_Buffer, CCRValue_BufferSize);
 
   /* USER CODE END 2 */
 
@@ -134,6 +155,11 @@ Error_Handler();
   {
     if (g_gpio_user_button) {
       g_gpio_user_button = false;
+      int i;
+      for (i = 0; i < 4; ++i) {
+        HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
+        HAL_Delay(50);
+      }
     }
     /* USER CODE END WHILE */
 
