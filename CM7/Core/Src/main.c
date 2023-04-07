@@ -59,20 +59,6 @@ const uint32_t MAX_CYCLE_OFF_TIME = 100000;  // Expressed in 100 ns intervals.
 const uint8_t MIN_NUM_CYCLE_PER_BURST = 1;
 const uint8_t MAX_NUM_CYCLE_PER_BURST = 100;
 
-/*
-  cycle on width (pulse width): 0.5 µs to 100 µs
-  cycle off width (cycle_delay): 0.5 µs to 10 ms
-  cycles per burst: 1 to 100
-  burst delay: 10 ms to 1 s 
-  number of burst: 1 to 100
-
-  maximum time: (((0.0001 + 0.01) * 100) + 1) * 100 = 201 seconds
-  maximum CCR values: 20000
-
-  Since the timing between bursts is not super tight, we can probably just
-  trigger that from software and reduce the CCR DMA maximum size from 20000 to
-  200 samples, so 800 bytes.
-*/
 #define MAX_CCR_VALUE_BUFFER_LEN 800
 ALIGN_32BYTES (uint32_t g_ccr_value_buffer[MAX_CCR_VALUE_BUFFER_LEN]);
 /* USER CODE END PV */
