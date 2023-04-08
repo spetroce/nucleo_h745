@@ -40,6 +40,7 @@ set(CMAKE_SIZE_UTIL ${TOOLCHAIN_PREFIX}size)
 add_definitions(-DUSE_HAL_DRIVER)
 add_definitions(-DCORE_CM7)
 add_definitions(-DSTM32H745xx)
+add_definitions(-DUSE_FULL_LL_DRIVER)
 
 set(COMMON_FLAGS "-mcpu=cortex-m7 -mfpu=fpv5-d16 -mfloat-abi=hard -mthumb")
 set(CMAKE_C_FLAGS "${COMMON_FLAGS} -ffunction-sections -fdata-sections -Wall -fstack-usage") # dont use -std=gnu11 or -fcyclomatic-complexity

@@ -108,6 +108,102 @@ uint16_t SetupCycleBurstBuffer(const uint16_t cycle_on_time,
   }
   return i;
 }
+
+// void TimOcStartDmaLowLevel() {
+//   /* Set the DMA compare callbacks */
+//   // htim->hdma[TIM_DMA_ID_CC1]->XferCpltCallback = TIM_DMADelayPulseCplt;
+//   // htim->hdma[TIM_DMA_ID_CC1]->XferHalfCpltCallback = TIM_DMADelayPulseHalfCplt;
+//   /* Set the DMA error callback */
+//   // htim->hdma[TIM_DMA_ID_CC1]->XferErrorCallback = TIM_DMAError ;
+
+//   /* Enable the Output compare channel */
+//   // TIM_CCxChannelCmd(htim->Instance, Channel, TIM_CCx_ENABLE);
+//   LL_TIM_CC_DisableChannel(TIM2, LL_TIM_CHANNEL_CH1);  // HAL does this, might not be necessary.
+//   LL_TIM_CC_EnableChannel(TIM2, LL_TIM_CHANNEL_CH1);
+
+//   /* Enable the DMA stream */
+//   HAL_DMA_Start_IT(htim->hdma[TIM_DMA_ID_CC1], (uint32_t)pData, (uint32_t)&htim->Instance->CCR1, Length);
+
+//   LL_TIM_EnableDMAReq_CC1(TIM2);
+  
+//   LL_TIM_GenerateEvent_CC1(TIM2);
+
+//   LL_TIM_GenerateEvent_UPDATE(TIM2);
+
+//   LL_TIM_EnableCounter(TIM2);
+// }
+
+typedef struct
+{
+  __IO uint32_t ISR;   /*!< DMA interrupt status register */
+  __IO uint32_t Reserved0;
+  __IO uint32_t IFCR;  /*!< DMA interrupt flag clear register */
+} DMA_Base_Registers;
+
+HAL_StatusTypeDef HAL_DMA_Start_(DMA_HandleTypeDef *hdma, uint32_t SrcAddress, uint32_t DstAddress, uint32_t DataLength)
+{
+  // #define DMA_SxCR_EN_Pos          (0U)
+  // #define DMA_SxCR_EN_Msk          (0x1UL << DMA_SxCR_EN_Pos)                    /*!< 0x00000001 */
+  // #define DMA_SxCR_EN              DMA_SxCR_EN_Msk                               /*!< Stream enable / flag stream ready when read low */
+  /* Disable the peripheral */
+  // __HAL_DMA_DISABLE(hdma);
+  ((DMA_Stream_TypeDef *)(hdma)->Instance)->CR &= ~DMA_SxCR_EN;
+
+  /* calculate DMA base and stream number */
+  DMA_Base_Registers  *regs_dma  = (DMA_Base_Registers *)hdma->StreamBaseAddress;
+
+  /* Clear the DMAMUX synchro overrun flag */
+  hdma->DMAmuxChannelStatus->CFR = hdma->DMAmuxChannelStatusMask;
+
+  /* Clear all interrupt flags at correct offset within the register */
+  regs_dma->IFCR = 0x3FUL << (hdma->StreamIndex & 0x1FU);
+
+  /* Clear DBM bit */
+  ((DMA_Stream_TypeDef *)hdma->Instance)->CR &= (uint32_t)(~DMA_SxCR_DBM);
+
+  /* Configure DMA Stream data length */
+  ((DMA_Stream_TypeDef *)hdma->Instance)->NDTR = DataLength;
+
+  /* Configure DMA Stream destination address */
+  ((DMA_Stream_TypeDef *)hdma->Instance)->PAR = DstAddress;
+
+  /* Configure DMA Stream source address */
+  ((DMA_Stream_TypeDef *)hdma->Instance)->M0AR = SrcAddress;
+
+  /* Enable the Peripheral */
+  // __HAL_DMA_ENABLE(hdma);
+  ((DMA_Stream_TypeDef *)(hdma)->Instance)->CR |=  DMA_SxCR_EN;
+
+  return HAL_OK;
+}
+
+void TimOcStartDma(TIM_HandleTypeDef *htim, uint32_t Channel, const uint32_t *pData, uint16_t Length) {
+  /* Set the DMA compare callbacks */
+  // htim->hdma[TIM_DMA_ID_CC1]->XferCpltCallback = TIM_DMADelayPulseCplt;
+  // htim->hdma[TIM_DMA_ID_CC1]->XferHalfCpltCallback = TIM_DMADelayPulseHalfCplt;
+  /* Set the DMA error callback */
+  // htim->hdma[TIM_DMA_ID_CC1]->XferErrorCallback = TIM_DMAError ;
+
+  /* Enable the Output compare channel */
+  TIM_CCxChannelCmd(htim->Instance, Channel, TIM_CCx_ENABLE);
+
+  /* Enable the DMA stream */
+  HAL_DMA_Start_(htim->hdma[TIM_DMA_ID_CC1], (uint32_t)pData, (uint32_t)&htim->Instance->CCR1, Length);
+
+  /* Enable the TIM Capture/Compare 1 DMA request */
+  __HAL_TIM_ENABLE_DMA(htim, TIM_DMA_CC1);
+  
+  htim2.Instance->EGR  |= TIM_EGR_CC1G;
+
+  htim2.Instance->EGR  |= TIM_EGR_UG;
+
+  // if (IS_TIM_BREAK_INSTANCE(htim->Instance)) {  // returns false for TIM2
+  //   /* Enable the main output */
+  //   __HAL_TIM_MOE_ENABLE(htim);
+  // }
+
+  __HAL_TIM_ENABLE(htim);
+}
 /* USER CODE END 0 */
 
 /**
@@ -192,7 +288,7 @@ Error_Handler();
     if (g_gpio_user_button) {
       g_gpio_user_button = false;
       int i;
-      uint16_t ccr_value_buffer_len = SetupCycleBurstBuffer(10, 5, 3);
+      uint16_t ccr_value_buffer_len = SetupCycleBurstBuffer(10, 5, 4);
       if (ccr_value_buffer_len) {
         for (i = 0; i < 4; ++i) {
           HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
@@ -202,7 +298,10 @@ Error_Handler();
       // __HAL_TIM_SET_COUNTER(&htim2, 0);
       SCB_CleanDCache_by_Addr(g_ccr_value_buffer, ccr_value_buffer_len);
       // htim2.Instance->EGR  |= TIM_EGR_UG;
-      HAL_TIM_OC_Start_DMA(&htim2, TIM_CHANNEL_1, g_ccr_value_buffer, ccr_value_buffer_len);
+      // __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, g_ccr_value_buffer[0]);
+      // HAL_TIM_OC_Start_DMA(&htim2, TIM_CHANNEL_1, g_ccr_value_buffer, ccr_value_buffer_len);
+      TimOcStartDma(&htim2, TIM_CHANNEL_1, g_ccr_value_buffer, ccr_value_buffer_len);
+      // HAL_TIM_PWM_PulseFinishedCallback()
     }
     /* USER CODE END WHILE */
 
@@ -257,13 +356,13 @@ void SystemClock_Config(void)
                               |RCC_CLOCKTYPE_D3PCLK1|RCC_CLOCKTYPE_D1PCLK1;
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
   RCC_ClkInitStruct.SYSCLKDivider = RCC_SYSCLK_DIV1;
-  RCC_ClkInitStruct.AHBCLKDivider = RCC_HCLK_DIV16;
+  RCC_ClkInitStruct.AHBCLKDivider = RCC_HCLK_DIV2;
   RCC_ClkInitStruct.APB3CLKDivider = RCC_APB3_DIV2;
   RCC_ClkInitStruct.APB1CLKDivider = RCC_APB1_DIV2;
   RCC_ClkInitStruct.APB2CLKDivider = RCC_APB2_DIV2;
   RCC_ClkInitStruct.APB4CLKDivider = RCC_APB4_DIV2;
 
-  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_0) != HAL_OK)
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_2) != HAL_OK)
   {
     Error_Handler();
   }
