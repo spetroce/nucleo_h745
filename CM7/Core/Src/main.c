@@ -134,6 +134,11 @@ Error_Handler();
   {
     if (g_gpio_user_button) {
       g_gpio_user_button = false;
+      int i;
+      for (i = 0; i < 4; ++i) {
+        HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
+        HAL_Delay(50);
+      }
     }
     /* USER CODE END WHILE */
 
