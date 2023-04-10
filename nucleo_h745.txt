@@ -1,6 +1,6 @@
 Configuration	nucleo_h745
 STM32CubeMX 	6.8.0
-Date	04/07/2023
+Date	04/10/2023
 MCU	STM32H745ZITx
 
 
