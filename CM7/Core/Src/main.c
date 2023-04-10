@@ -200,7 +200,7 @@ Error_Handler();
         }
       }
       // __HAL_TIM_SET_COUNTER(&htim2, 0);
-      SCB_CleanDCache_by_Addr(g_ccr_value_buffer, ccr_value_buffer_len);
+      SCB_CleanDCache_by_Addr(g_ccr_value_buffer, ccr_value_buffer_len*sizeof(uint32_t));
       // htim2.Instance->EGR  |= TIM_EGR_UG;
       HAL_TIM_OC_Start_DMA(&htim2, TIM_CHANNEL_1, g_ccr_value_buffer, ccr_value_buffer_len);
     }
