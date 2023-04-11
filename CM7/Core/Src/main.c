@@ -219,8 +219,8 @@ Error_Handler();
         }
         SCB_CleanDCache_by_Addr(g_ccr_value_buffer, ccr_value_buffer_len*sizeof(uint32_t));
         HAL_TIM_OC_Start_DMA(&htim2, TIM_CHANNEL_1, g_ccr_value_buffer, ccr_value_buffer_len);
-        __HAL_TIM_ENABLE(&htim2);  // TODO: check if we can move 2 lines above to replace this line.
         HAL_TIM_GenerateEvent(&htim2, TIM_EVENTSOURCE_CC1);
+        __HAL_TIM_ENABLE(&htim2);  // TODO: check if we can move 2 lines above to replace this line.
       }
     }
     /* USER CODE END WHILE */
