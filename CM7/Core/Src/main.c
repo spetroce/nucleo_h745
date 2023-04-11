@@ -46,13 +46,21 @@
 
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
-
+// #define TEST_WAVEFORM
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-ALIGN_32BYTES (uint32_t ccr_array[6]) = {0, 5, 15, 30, 50, 75};
+const uint16_t MIN_CYCLE_ON_TIME = 5;  // Expressed in 100 ns intervals.
+const uint16_t MAX_CYCLE_ON_TIME = 1000;  // Expressed in 100 ns intervals.
+const uint32_t MIN_CYCLE_OFF_TIME = 5;  // Expressed in 100 ns intervals.
+const uint32_t MAX_CYCLE_OFF_TIME = 100000;  // Expressed in 100 ns intervals.
+const uint8_t MIN_NUM_CYCLE_PER_BURST = 1;
+const uint8_t MAX_NUM_CYCLE_PER_BURST = 100;
+
+#define MAX_CCR_VALUE_BUFFER_LEN 800
+ALIGN_32BYTES (uint32_t g_ccr_value_buffer[MAX_CCR_VALUE_BUFFER_LEN]);
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -63,7 +71,60 @@ void SystemClock_Config(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+/**
+ * \brief Fill the cycle burst CCR value buffer.
+ *
+ * \param cycle_on_time The cycle on time in 100 ns intervals. Valid values are
+ * from MIN_CYCLE_ON_TIME to MAX_CYCLE_ON_TIME.
+ * \param cycle_off_time The cycle off time in 100 ns intervals. Valid values
+ * are from MIN_CYCLE_OFF_TIME to MAX_CYCLE_OFF_TIME.
+ * \param num_cycle_per_burst The number of cycles per burst (ie. The number of
+ * times a cycle should be repeated). Valid values are from
+ * MIN_NUM_CYCLE_PER_BURST to MAX_NUM_CYCLE_PER_BURST.
+ * \return Returns the number of values added to the DMA CCR value buffer. If an
+ * error occured, zero is returned.
+ */
+uint16_t SetupCycleBurstBuffer(const uint16_t cycle_on_time,
+                               const uint32_t cycle_off_time,
+                               const uint8_t num_cycle_per_burst) {
+#ifdef TEST_WAVEFORM
+  g_ccr_value_buffer[0] = 0;
+  g_ccr_value_buffer[1] = 5;
+  g_ccr_value_buffer[2] = 15;
+  g_ccr_value_buffer[3] = 30;
+  g_ccr_value_buffer[4] = 50;
+  g_ccr_value_buffer[5] = 75;
+  return 6;
+#endif
+  if (cycle_on_time < MIN_CYCLE_ON_TIME ||
+      cycle_on_time > MAX_CYCLE_ON_TIME ||
+      cycle_off_time < MIN_CYCLE_OFF_TIME ||
+      cycle_off_time > MAX_CYCLE_OFF_TIME ||
+      num_cycle_per_burst < MIN_NUM_CYCLE_PER_BURST ||
+      num_cycle_per_burst > MAX_NUM_CYCLE_PER_BURST) {
+    return 0;
+  }
+  uint32_t tim_cnt = 0;
+  uint16_t i = 0, j;
+  g_ccr_value_buffer[i++] = tim_cnt;
+  for (j = 0; j < num_cycle_per_burst; ++j) {
+    tim_cnt += cycle_on_time;
+    g_ccr_value_buffer[i++] = tim_cnt;
+    if (j+1 < num_cycle_per_burst) {
+      tim_cnt += cycle_off_time;
+      g_ccr_value_buffer[i++] = tim_cnt;
+    }
+  }
+  return i;
+}
 
+void BlinkLed() {
+  int i;
+  for (i = 0; i < 4; ++i) {
+    HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
+    HAL_Delay(50);
+  }
+}
 /* USER CODE END 0 */
 
 /**
@@ -135,23 +196,32 @@ Error_Handler();
   MX_ETH_Init();
   MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
-  SCB_CleanDCache_by_Addr(ccr_array, 6*sizeof(uint32_t));
-  HAL_TIM_OC_Start_DMA(&htim2, TIM_CHANNEL_1, ccr_array, 6);
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+  bool first_output = true;
   while (1)
   {
     if (g_gpio_user_button) {
       g_gpio_user_button = false;
-      int i;
-      for (i = 0; i < 4; ++i) {
-        HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
-        HAL_Delay(50);
+      uint16_t ccr_value_buffer_len = SetupCycleBurstBuffer(10, 5, 3);
+      if (ccr_value_buffer_len) {
+        BlinkLed();
+        if (first_output) {
+          first_output = false;
+        }
+        else {
+          HAL_TIM_OC_Stop_DMA(&htim2, TIM_CHANNEL_1);
+          __HAL_TIM_SET_COUNTER(&htim2, 0);
+          HAL_TIM_GenerateEvent(&htim2, TIM_EVENTSOURCE_UPDATE);
+        }
+        SCB_CleanDCache_by_Addr(g_ccr_value_buffer, ccr_value_buffer_len*sizeof(uint32_t));
+        HAL_TIM_OC_Start_DMA(&htim2, TIM_CHANNEL_1, g_ccr_value_buffer, ccr_value_buffer_len);
+        __HAL_TIM_ENABLE(&htim2);  // TODO: check if we can move 2 lines above to replace this line.
+        HAL_TIM_GenerateEvent(&htim2, TIM_EVENTSOURCE_CC1);
       }
-      __HAL_TIM_ENABLE(&htim2);  // TODO: check if we can move 2 lines above to replace this line.
-      HAL_TIM_GenerateEvent(&htim2, TIM_EVENTSOURCE_CC1);
     }
     /* USER CODE END WHILE */
 

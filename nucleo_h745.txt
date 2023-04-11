@@ -24,6 +24,7 @@ TIM2	Trigger Mode	TIM2_VS_ControllerModeTrigger	VP_TIM2_VS_ControllerModeTrigger
 TIM2	TI2FP2	TIM2_CH2	PB3 (JTDO/TRACESWO)
 TIM2	Internal Clock	TIM2_VS_ClockSourceINT	VP_TIM2_VS_ClockSourceINT
 TIM2	Output Compare CH1	TIM2_CH1	PA0
+TIM2	One pulse	TIM2_VS_OPM	VP_TIM2_VS_OPM
 USART3	Asynchronous	USART3_RX	PD9
 USART3	Asynchronous	USART3_TX	PD8
 USB_OTG_FS	Device_Only	USB_OTG_FS_DM	PA11
@@ -80,6 +81,7 @@ TIM2	Trigger Mode	TIM2_VS_ControllerModeTrigger	VP_TIM2_VS_ControllerModeTrigger
 TIM2	TI2FP2	TIM2_CH2	PB3 (JTDO/TRACESWO)
 TIM2	Internal Clock	TIM2_VS_ClockSourceINT	VP_TIM2_VS_ClockSourceINT
 TIM2	Output Compare CH1	TIM2_CH1	PA0
+TIM2	One pulse	TIM2_VS_OPM	VP_TIM2_VS_OPM
 USART3	Asynchronous	USART3_RX	PD9
 USART3	Asynchronous	USART3_TX	PD8
 USB_OTG_FS	Device_Only	USB_OTG_FS_DM	PA11
