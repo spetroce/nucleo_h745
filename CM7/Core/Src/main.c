@@ -52,7 +52,7 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-ALIGN_32BYTES (uint32_t ccr_array[10]) = {10, 20, 30, 40, 50, 60, 70, 80, 90, 10};
+ALIGN_32BYTES (uint32_t ccr_array[6]) = {0, 5, 15, 30, 50, 75};
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -135,7 +135,8 @@ Error_Handler();
   MX_ETH_Init();
   MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
-
+  SCB_CleanDCache_by_Addr(ccr_array, 6*sizeof(uint32_t));
+  HAL_TIM_OC_Start_DMA(&htim2, TIM_CHANNEL_1, ccr_array, 6);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -149,8 +150,8 @@ Error_Handler();
         HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
         HAL_Delay(50);
       }
-      SCB_CleanDCache_by_Addr(ccr_array, 40);
-      HAL_TIM_OC_Start_DMA(&htim2, TIM_CHANNEL_1, ccr_array, 10);
+      __HAL_TIM_ENABLE(&htim2);  // TODO: check if we can move 2 lines above to replace this line.
+      HAL_TIM_GenerateEvent(&htim2, TIM_EVENTSOURCE_CC1);
     }
     /* USER CODE END WHILE */
 
