@@ -95,8 +95,9 @@ uint16_t SetupCycleBurstBuffer(const uint16_t cycle_on_time,
       num_cycle_per_burst > MAX_NUM_CYCLE_PER_BURST) {
     return 0;
   }
-  uint32_t tim_cnt = 0;
+  uint32_t tim_cnt = 1;
   uint16_t i = 0, j;
+  g_ccr_value_buffer[i++] = tim_cnt;
   for (j = 0; j < num_cycle_per_burst; ++j) {
     tim_cnt += cycle_on_time;
     g_ccr_value_buffer[i++] = tim_cnt;
@@ -191,7 +192,7 @@ Error_Handler();
     if (g_gpio_user_button) {
       g_gpio_user_button = false;
       int i;
-      uint16_t ccr_value_buffer_len = SetupCycleBurstBuffer(10, 5, 3);
+      uint16_t ccr_value_buffer_len = SetupCycleBurstBuffer(10, 5, 5);
       if (ccr_value_buffer_len) {
         for (i = 0; i < 4; ++i) {
           HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
