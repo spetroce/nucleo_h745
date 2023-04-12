@@ -104,7 +104,7 @@ uint16_t SetupCycleBurstBuffer(const uint16_t cycle_on_time,
       num_cycle_per_burst > MAX_NUM_CYCLE_PER_BURST) {
     return 0;
   }
-  uint32_t tim_cnt = 0;
+  uint32_t tim_cnt = 1;
   uint16_t i = 0, j;
   g_ccr_value_buffer[i++] = tim_cnt;
   for (j = 0; j < num_cycle_per_burst; ++j) {
@@ -220,7 +220,7 @@ Error_Handler();
         SCB_CleanDCache_by_Addr(g_ccr_value_buffer, ccr_value_buffer_len*sizeof(uint32_t));
         HAL_TIM_OC_Start_DMA(&htim2, TIM_CHANNEL_1, g_ccr_value_buffer, ccr_value_buffer_len);
         HAL_TIM_GenerateEvent(&htim2, TIM_EVENTSOURCE_CC1);
-        __HAL_TIM_ENABLE(&htim2);  // TODO: check if we can move 2 lines above to replace this line.
+        __HAL_TIM_ENABLE(&htim2);
       }
     }
     /* USER CODE END WHILE */
