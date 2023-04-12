@@ -88,12 +88,12 @@ uint16_t SetupCycleBurstBuffer(const uint16_t cycle_on_time,
                                const uint32_t cycle_off_time,
                                const uint8_t num_cycle_per_burst) {
 #ifdef TEST_WAVEFORM
-  g_ccr_value_buffer[0] = 0;
-  g_ccr_value_buffer[1] = 5;
-  g_ccr_value_buffer[2] = 15;
-  g_ccr_value_buffer[3] = 30;
-  g_ccr_value_buffer[4] = 50;
-  g_ccr_value_buffer[5] = 75;
+  g_ccr_value_buffer[0] = 1;
+  g_ccr_value_buffer[1] = g_ccr_value_buffer[0] + 5;
+  g_ccr_value_buffer[2] = g_ccr_value_buffer[1] + 10;
+  g_ccr_value_buffer[3] = g_ccr_value_buffer[2] + 15;
+  g_ccr_value_buffer[4] = g_ccr_value_buffer[3] + 20;
+  g_ccr_value_buffer[5] = g_ccr_value_buffer[4] + 25;
   return 6;
 #endif
   if (cycle_on_time < MIN_CYCLE_ON_TIME ||
