@@ -97,7 +97,6 @@ uint16_t SetupCycleBurstBuffer(const uint16_t cycle_on_time,
   }
   uint32_t tim_cnt = 0;
   uint16_t i = 0, j;
-  g_ccr_value_buffer[i++] = tim_cnt;
   for (j = 0; j < num_cycle_per_burst; ++j) {
     tim_cnt += cycle_on_time;
     g_ccr_value_buffer[i++] = tim_cnt;
@@ -200,7 +199,8 @@ Error_Handler();
         }
       }
       SCB_CleanDCache_by_Addr(g_ccr_value_buffer, ccr_value_buffer_len*sizeof(uint32_t));
-      HAL_TIM_OC_Start_DMA(&htim2, TIM_CHANNEL_1, g_ccr_value_buffer, ccr_value_buffer_len);
+      __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, g_ccr_value_buffer[0]);
+      HAL_TIM_OC_Start_DMA(&htim2, TIM_CHANNEL_1, g_ccr_value_buffer + 1, ccr_value_buffer_len);
     }
     /* USER CODE END WHILE */
 
